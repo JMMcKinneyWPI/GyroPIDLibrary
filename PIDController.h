@@ -64,9 +64,7 @@ float pidExecute(PID &pid, float error)
 		pid.errorSum += error*pid.dT;
 
 	pid.lastOutput = pid.output;
-	pid.output = error * pid.kP +
-								 pid.errorSum * pid.kI +
-								 rate * pid.kD;
+	pid.output = error * pid.kP + pid.errorSum * pid.kI + rate * pid.kD;
 
 	return pidFilteredOutput(pid);
 }
