@@ -1,6 +1,9 @@
  /* QCC2 PID Controller Library
   * Jason McKinney
-  * 04/20/2015
+  * 07/22/2015
+<!--             07/22 Update            -->
+	- Fixed bug in slew rate calculation that caused 
+		the output value to wind faster than rate should allow. 
 */
 
 #ifndef PIDController_h
@@ -25,13 +28,14 @@ void pidInit(PID &pid, float kP, float kI, float kD, float epsilon, float slewRa
 	pid.slewRate = slewRate;
 	pid.error = 0;
 	pid.output = 0;
+	pid.lastOutput = 0;
 }
 
 //Calculate and filter the control loop output for use with vex motors
 float pidFilteredOutput(PID &pid)
 {
-	float filteredOut = 0;
-	if(pid.dT != 0 && pid.output != 0)
+	float filteredOut = pid.output;
+	if(pid.dT != 0)
 	{
 		if(abs(pid.output - pid.lastOutput)/pid.dT > pid.slewRate)
 			filteredOut = pid.lastOutput + pid.slewRate*pid.dT * (pid.output/abs(pid.output));
@@ -41,6 +45,7 @@ float pidFilteredOutput(PID &pid)
 	if(abs(filteredOut) > 127)
 		filteredOut = 127 * filteredOut/abs(filteredOut);
 
+	pid.lastOutput = filteredOut;
 	return filteredOut;
 }
 
@@ -63,8 +68,9 @@ float pidExecute(PID &pid, float error)
 	if(abs(error) > pid.epsilon)
 		pid.errorSum += error*pid.dT;
 
-	pid.lastOutput = pid.output;
-	pid.output = error * pid.kP + pid.errorSum * pid.kI + rate * pid.kD;
+	pid.output = error * pid.kP +
+								 pid.errorSum * pid.kI +
+								 rate * pid.kD;
 
 	return pidFilteredOutput(pid);
 }
