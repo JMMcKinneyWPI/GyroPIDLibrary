@@ -11,49 +11,47 @@
 
 typedef struct Controller{
 	float timer, dT; //For delta time of controller operation
-	float kP, kI, kD, epsilon, slewRate; //Controller constants
-	int error, lastError; //Error calculations
+	float kP, kI, kD, epsilon; //Controller constants
+	int pV, setPoint, lastPV; //sensor read (process Variable), loop set point and previous sensorVal
 	float errorSum; //Sumnation of error while in deadband
 	float output, lastOutput;
 }PID;
 
 //initialize the PID controller with desired constants
-void pidInit(PID &pid, float kP, float kI, float kD, float epsilon, float slewRate)
-{
+void pidInit(PID &pid, float kP, float kI, float kD, float epsilon){
 	pid.timer = nPgmTime;
 	pid.kP = kP;
 	pid.kI = kI;
 	pid.kD = kD;
 	pid.epsilon = epsilon;
-	pid.slewRate = slewRate;
 	pid.error = 0;
+	pid.pV = 0;
 	pid.output = 0;
 	pid.lastOutput = 0;
 }
 
 //Calculate and filter the control loop output for use with vex motors
-float pidFilteredOutput(PID &pid)
-{
+float pidFilteredOutput(PID &pid){
 	float filteredOut = pid.output;
 	if(pid.dT != 0)
-	{
-		if(abs(pid.output - pid.lastOutput)/pid.dT > pid.slewRate)
-			filteredOut = pid.lastOutput + pid.slewRate*pid.dT * (pid.output/abs(pid.output));
-		else
-			filteredOut = pid.output;
-	}
+		filteredOut = pid.output;
 	if(abs(filteredOut) > 127)
 		filteredOut = 127 * filteredOut/abs(filteredOut);
 
 	pid.lastOutput = filteredOut;
-	return filteredOut;
+	return filteredOut;`
+}
+
+void pidSet(PID &pid, int setPoint){
+	pid.setPoint = setPoint;
 }
 
 //Execute the control loop and return its output
-float pidExecute(PID &pid, float error)
-{
-	pid.lastError = pid.error;
-	pid.error = error;
+float pidExecute(PID &pid, int sensorValue, int setPoint){
+	pidSet(pid, setPoint);
+	pid.lastPV = pid.pV;
+	pid.pV = sensorValue;
+	pid.error = pid.setPoint - pid.pV;
 
 	pid.dT = (nPgmTime - pid.timer)/1000; //delta time in seconds
 	pid.timer = nPgmTime;
@@ -61,7 +59,7 @@ float pidExecute(PID &pid, float error)
 
 	float rate;
 	if(abs(pid.dT) > 0)
-		rate = (pid.error - pid.lastError)/pid.dT;
+		rate = (pid.pV - pid.lastPV)/pid.dT;
 	else
 		rate = 0;
 
@@ -73,14 +71,5 @@ float pidExecute(PID &pid, float error)
 								 rate * pid.kD;
 
 	return pidFilteredOutput(pid);
-}
-
-//reset the PID controller
-void pidReset(PID &pid)
-{
-	pid.errorSum = 0;
-	pid.dT = 0;
-	pid.lastOutput = 0;
-	pid.lastError = 0;
 }
 #endif

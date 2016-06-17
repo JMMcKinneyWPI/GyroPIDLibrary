@@ -41,7 +41,7 @@ void driveR(int val)
 void gyroTurn(float target)
 {
 	if(abs(target) < 40)
-		pidInit(gyroPid, 3, 0, 0.15, 3, 1270);
+		pidInit(gyroPid, 3, 0, 0.15, 3);
 	bool atGyro = false;
 	long atTargetTime = nPgmTime;
 	long timer = nPgmTime;
@@ -60,8 +60,7 @@ void gyroTurn(float target)
 		timer = nPgmTime;
 		
 		//Calculate the output of the PID controller and output to drive motors
-		float error = (float)target - angle;
-		float driveOut = pidExecute(gyroPid, error);
+		float driveOut = pidExecute(gyroPid, angle, target);
 		driveL(-driveOut);
 		driveR(driveOut);
 
@@ -77,7 +76,7 @@ void gyroTurn(float target)
 	}
 	
 	//Reinitialize the PID constants to their original values in case they were changed
-	pidInit(gyroPid, 2, 0, 0.15, 2, 1270);
+	pidInit(gyroPid, 2, 0, 0.15, 2);
 }
 
 //Calibrate gyro and initialize PID controller
@@ -94,9 +93,9 @@ void pre_auton()
 	
 	/*Initialize PID controller for gyro
 	 * kP = 2, kI = 0, kD = 0.15
-	 * epsilon = 0, slewRate = 1270
+	 * epsilon = 0
 	*/
-	pidInit(gyroPid, 2, 0, 0.15, 0, 1270);
+	pidInit(gyroPid, 2, 0, 0.15, 0);
 }
 
 task autonomous()
